@@ -1,0 +1,101 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Fraunces", Georgia, serif;
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+
+  --color-cream: #FFFBF2;
+  --color-parchment: #FFF6E9;
+  --color-sand: #F5E8D3;
+  --color-sand-dark: #EAD9BE;
+  --color-cocoa: #2D1E14;
+  --color-bark: #4A3226;
+  --color-mocha: #7A5C4A;
+  --color-burgundy: #6E1E2B;
+  --color-burgundy-deep: #4E1420;
+  --color-terracotta: #C4673A;
+  --color-terracotta-deep: #A44E27;
+  --color-gold: #C9A24B;
+  --color-sage: #7D8C6F;
+  --color-blush: #F9E8DE;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-cream);
+  color: var(--color-cocoa);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: #6E1E2B;
+  color: #FFFBF2;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: #FFF6E9; }
+::-webkit-scrollbar-thumb { background: #D8C3A5; border-radius: 99px; border: 2px solid #FFF6E9; }
+::-webkit-scrollbar-thumb:hover { background: #6E1E2B; }
+
+/* Texture: subtle grain + dots */
+.grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: radial-gradient(rgba(45,30,20,0.06) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+.font-serif { font-family: var(--font-serif) !important; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.text-balance { text-wrap: balance; }
+
+/* Marquee */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-marquee { animation: marquee 28s linear infinite; }
+
+@keyframes floaty {
+  0%,100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+.animate-floaty { animation: floaty 5s ease-in-out infinite; }
+
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+/* Card image zoom */
+.zoom-img img { transition: transform 0.8s cubic-bezier(0.22,1,0.36,1); }
+.zoom-img:hover img { transform: scale(1.07); }
+
+/* Button shine */
+.btn-shine { position: relative; overflow: hidden; }
+.btn-shine::after {
+  content: "";
+  position: absolute;
+  top: 0; left: -80%;
+  width: 50%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.35), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.6s ease;
+}
+.btn-shine:hover::after { left: 130%; }
+
+/* Hide number arrows */
+input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
