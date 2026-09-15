@@ -6,7 +6,8 @@ import {
   Clock, ShieldCheck, Info, Sparkles, PackageCheck
 } from "lucide-react";
 import { PRODUCTS, formatINR, type Category, type Product } from "../data/products";
-import { apiBase, type SiteSettings } from "../data/siteSettings";
+import { apiBase, getPreferredDays, type SiteSettings } from "../data/siteSettings";
+import UPIQRCode from "./UPIQRCode";
 
 const WHATSAPP_NUMBER = "919341231420";
 const UPI_ID = "khushpreetkaur8822-2@okhdfcbank";
@@ -521,7 +522,14 @@ export function Checkout({
   lines: CartLine[]; onBack: () => void; onPlaced: (o: PlacedOrder, menu?: MenuStockSnapshot[]) => void;
   settings: SiteSettings;
 }) {
-  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "", area: "Lalpur", landmark: "", date: "Monday", note: "" });
+  const availableDays = useMemo(() => getPreferredDays(settings), [settings]);
+  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "", area: "Lalpur", landmark: "", date: availableDays[0] || "Monday", note: "" });
+
+  useEffect(() => {
+    if (availableDays.length > 0 && !availableDays.includes(form.date)) {
+      setForm((f) => ({ ...f, date: availableDays[0] }));
+    }
+  }, [availableDays]);
   const [deliveryQuote, setDeliveryQuote] = useState<{ area: string; deliveryFee: number; freeDelivery: boolean; message: string } | null>(null);
   const [calculatingDelivery, setCalculatingDelivery] = useState(false);
   const [deliveryError, setDeliveryError] = useState("");
@@ -534,7 +542,7 @@ export function Checkout({
   const subtotal = lines.reduce((s, l) => s + l.unitPrice * l.qty, 0);
   const deliveryFee = method === "pickup" ? 0 : deliveryQuote?.deliveryFee ?? 0;
   const total = subtotal + deliveryFee;
-  const upiLink = `upi://pay?pa=${encodeURIComponent(UPI_ID)}&pn=${encodeURIComponent("Sauce And Sugar")}&am=${total.toFixed(2)}&cu=INR&tn=${encodeURIComponent("Sauce And Sugar order")}`;
+  const upiLink = `upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent("Sauce And Sugar")}&am=${total.toFixed(2)}&cu=INR&tn=${encodeURIComponent("Sauce And Sugar order")}`;
 
   useEffect(() => {
     if (method === "pickup") {
@@ -586,7 +594,9 @@ export function Checkout({
         id: `SAS-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
         name: form.name, phone: form.phone, email: form.email,
         address: form.address, area: form.area, landmark: form.landmark,
-        date: form.date, method, payment, lines, subtotal, deliveryFee, total, note: form.note,
+        date: form.date, method,
+        payment: payment === "UPI" ? "UPI (Paid)" : payment,
+        lines, subtotal, deliveryFee, total, note: form.note,
     };
     let finalOrder: PlacedOrder;
     let updatedMenu: MenuStockSnapshot[] | undefined;
@@ -723,9 +733,33 @@ export function Checkout({
               <div className="mt-3 grid sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-black uppercase tracking-wide text-[#7A5C4A]">Preferred day</label>
-                  <select value={form.date} onChange={set("date")} className={inputCls(false) + " mt-1.5"}>
-                    <option>Monday</option>
-                  </select>
+                  {availableDays.length <= 4 ? (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {availableDays.map((day) => {
+                        const active = form.date === day;
+                        return (
+                          <button
+                            key={day}
+                            type="button"
+                            onClick={() => setForm((f) => ({ ...f, date: day }))}
+                            className={`flex-1 min-w-[85px] py-2 px-3 rounded-xl text-xs font-black transition-all border ${
+                              active
+                                ? "bg-[#6E1E2B] border-[#6E1E2B] text-white shadow-xs"
+                                : "bg-white border-[#EAD9BE] text-[#4A3226] hover:bg-[#F5E8D3]/50"
+                            }`}
+                          >
+                            {day}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <select value={form.date} onChange={set("date")} className={inputCls(false) + " mt-1.5"}>
+                      {availableDays.map((day) => (
+                        <option key={day} value={day}>{day}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div>
                   <label className="text-xs font-black uppercase tracking-wide text-[#7A5C4A]">Note (optional)</label>
@@ -750,16 +784,14 @@ export function Checkout({
                 ))}
               </div>
               {payment === "UPI" && (
-                <div className="mt-3 rounded-2xl bg-[#F5E8D3]/70 border border-[#EAD9BE] p-3.5">
-                  <p className="text-xs font-black text-[#4A3226]">Pay {formatINR(total)} via UPI</p>
-                  <p className="mt-1 text-[12px] font-bold text-[#7A5C4A] break-all">{UPI_ID}</p>
-                  <a href={upiLink} className="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-[#1c7a3d] px-4 py-2.5 text-sm font-black text-white hover:bg-[#155f2f] transition-colors">
-                    Pay using UPI app
-                  </a>
-                  <button onClick={() => setUpiPaymentComplete(true)} className={`mt-2 w-full rounded-xl px-4 py-2.5 text-sm font-black transition-colors ${upiPaymentComplete ? "bg-[#1c7a3d]/15 text-[#1c7a3d]" : "bg-[#2D1E14] text-white hover:bg-[#4E1420]"}`}>
-                    {upiPaymentComplete ? "Payment completed" : "I have completed payment - continue"}
-                  </button>
-                </div>
+                <UPIQRCode
+                  upiId={UPI_ID}
+                  payeeName="Sauce And Sugar"
+                  amount={total}
+                  note="Sauce & Sugar - Order"
+                  isPaid={upiPaymentComplete}
+                  onPaymentToggle={setUpiPaymentComplete}
+                />
               )}
               <p className="mt-3 text-[11.5px] font-semibold text-[#B9A48C] flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" /> Complete payment first, then your order opens in WhatsApp.</p>
             </div>
@@ -798,7 +830,7 @@ export function Checkout({
                 <>{payment === "UPI" ? "Send Paid Order on WhatsApp" : "Send Order on WhatsApp"} • {formatINR(total)} <ChevronRight className="w-4 h-4" /></>
               )}
             </button>
-            <p className="mt-3 text-center text-[11px] font-semibold text-white/40 flex items-center justify-center gap-1"><Clock className="w-3.5 h-3.5" /> Fresh batch cooks after cut-off • Sat/Sun slots</p>
+            <p className="mt-3 text-center text-[11px] font-semibold text-white/40 flex items-center justify-center gap-1"><Clock className="w-3.5 h-3.5" /> Fresh batch cooks after cut-off • {availableDays.join(" / ")} slots</p>
           </div>
         </div>
       </div>

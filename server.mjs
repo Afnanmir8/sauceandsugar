@@ -65,9 +65,16 @@ async function saveOrders(orders) {
 
 async function readSettings() {
   try {
-    return JSON.parse(await readFile(settingsFile, "utf8"));
+    const s = JSON.parse(await readFile(settingsFile, "utf8"));
+    if (!Array.isArray(s.preferredDays) || s.preferredDays.length === 0) {
+      s.preferredDays = s.preferredDay
+        ? s.preferredDay.split(",").map((d) => d.trim()).filter(Boolean)
+        : ["Monday"];
+    }
+    s.preferredDay = s.preferredDays.join(", ") || "Monday";
+    return s;
   } catch {
-    return { batchNo: 42, weekNo: 42, weekLabel: "15 - 21 Sept", cutoffLabel: "Sunday 8 PM", preferredDay: "Monday" };
+    return { batchNo: 42, weekNo: 42, weekLabel: "15 - 21 Sept", cutoffLabel: "Sunday 8 PM", preferredDay: "Monday", preferredDays: ["Monday"] };
   }
 }
 
@@ -310,15 +317,21 @@ const server = createServer(async (request, response) => {
     if (!requireAdmin(request, response)) return;
     try {
       const input = await readBody(request);
+      const inputDays = Array.isArray(input.preferredDays)
+        ? input.preferredDays.map(String).map((d) => d.trim()).filter(Boolean)
+        : String(input.preferredDay || "Monday").split(",").map((d) => d.trim()).filter(Boolean);
+      const preferredDays = inputDays.length > 0 ? inputDays : ["Monday"];
+      const preferredDay = preferredDays.join(", ");
       const settings = {
         batchNo: Number(input.batchNo),
         weekNo: Number(input.weekNo),
         weekLabel: String(input.weekLabel || "").trim(),
         cutoffLabel: String(input.cutoffLabel || "").trim(),
-        preferredDay: String(input.preferredDay || "Monday").trim(),
+        preferredDay,
+        preferredDays,
       };
-      if (!Number.isInteger(settings.batchNo) || settings.batchNo < 1 || !Number.isInteger(settings.weekNo) || settings.weekNo < 1 || !settings.weekLabel || !settings.cutoffLabel || !settings.preferredDay) {
-        return send(response, 400, { error: "Batch, week, date range, cutoff, and preferred day are required." });
+      if (!Number.isInteger(settings.batchNo) || settings.batchNo < 1 || !Number.isInteger(settings.weekNo) || settings.weekNo < 1 || !settings.weekLabel || !settings.cutoffLabel || settings.preferredDays.length === 0) {
+        return send(response, 400, { error: "Batch, week, date range, cutoff, and at least one preferred day are required." });
       }
       await saveSettings(settings);
       return send(response, 200, { settings });

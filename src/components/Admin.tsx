@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Check, LogOut, Plus, RefreshCw, Save, ShieldCheck, Trash2 } from "lucide-react";
-import { apiBase, DEFAULT_SITE_SETTINGS, type SiteSettings } from "../data/siteSettings";
+import { apiBase, DEFAULT_SITE_SETTINGS, ALL_WEEK_DAYS, getPreferredDays, type SiteSettings } from "../data/siteSettings";
 
 type AdminOrder = {
   id: string;
@@ -29,6 +29,23 @@ export default function Admin({ onExit }: { onExit: () => void }) {
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+
+  const selectedDays = getPreferredDays(settings);
+
+  const toggleDay = (day: string) => {
+    let nextDays: string[];
+    if (selectedDays.includes(day)) {
+      if (selectedDays.length <= 1) return; // Keep at least one day selected
+      nextDays = selectedDays.filter((d) => d !== day);
+    } else {
+      nextDays = [...selectedDays, day];
+    }
+    setSettings({
+      ...settings,
+      preferredDays: nextDays,
+      preferredDay: nextDays.join(", "),
+    });
+  };
 
   const request = async (path: string, options: RequestInit = {}) => {
     let response: Response;
@@ -157,7 +174,39 @@ export default function Admin({ onExit }: { onExit: () => void }) {
               <label className="text-xs font-black uppercase tracking-wide">Week number<input type="number" min="1" value={settings.weekNo} onChange={(event) => setSettings({ ...settings, weekNo: Number(event.target.value) })} className={inputClass + " mt-1.5"} /></label>
               <label className="text-xs font-black uppercase tracking-wide">Week date label<input value={settings.weekLabel} onChange={(event) => setSettings({ ...settings, weekLabel: event.target.value })} placeholder="22 - 28 Sept" className={inputClass + " mt-1.5"} /></label>
               <label className="text-xs font-black uppercase tracking-wide">Order cutoff<input value={settings.cutoffLabel} onChange={(event) => setSettings({ ...settings, cutoffLabel: event.target.value })} placeholder="Sunday 8 PM" className={inputClass + " mt-1.5"} /></label>
-              <label className="text-xs font-black uppercase tracking-wide">Preferred day<select value={settings.preferredDay} onChange={(event) => setSettings({ ...settings, preferredDay: event.target.value })} className={inputClass + " mt-1.5"}><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option></select></label>
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-black uppercase tracking-wide">Preferred days</label>
+                  <span className="text-[11px] font-bold text-[#A44E27]">{selectedDays.length} selected</span>
+                </div>
+                <p className="mt-0.5 text-[11px] text-[#7A5C4A]">Select the days available for delivery/pickup.</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {ALL_WEEK_DAYS.map((day) => {
+                    const active = selectedDays.includes(day);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => toggleDay(day)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all active:scale-95 border ${
+                          active
+                            ? "bg-[#6E1E2B] border-[#6E1E2B] text-white shadow-xs"
+                            : "bg-white border-[#EAD9BE] text-[#4A3226] hover:bg-[#F5E8D3]/50"
+                        }`}
+                      >
+                        <span
+                          className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] ${
+                            active ? "bg-white text-[#6E1E2B]" : "border border-[#D8C3A5]"
+                          }`}
+                        >
+                          {active && "✓"}
+                        </span>
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
             <button className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#6E1E2B] px-4 py-3 font-black text-white hover:bg-[#4E1420]"><Save className="h-4 w-4" /> Save weekly settings</button>
           </form>

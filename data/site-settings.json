@@ -3,5 +3,14 @@
   "weekNo": 1,
   "weekLabel": "29 Sept- 03 Oct",
   "cutoffLabel": "Sunday 12 AM",
-  "preferredDay": "Monday"
+  "preferredDay": "Monday, Tuesday, Thursday, Friday, Sunday, Saturday, Wednesday",
+  "preferredDays": [
+    "Monday",
+    "Tuesday",
+    "Thursday",
+    "Friday",
+    "Sunday",
+    "Saturday",
+    "Wednesday"
+  ]
 }
